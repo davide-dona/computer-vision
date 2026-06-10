@@ -1,7 +1,21 @@
 \begin{tikzpicture}[scale=0.95]
-    \draw[->] (0,0) -- (8.5,0) node[right] {Bins $(1 \dots 255)$};
+    % Axes
+    \draw[->] (0,0) -- (8.5,0) node[right] {Component Value};
     \draw[->] (0,0) -- (0,4.5) node[above] {Count};
 
+    % X-axis ticks (0--255 scale)
+    \foreach \x/\label in {
+        0.3/0,
+        2.225/64,
+        4.15/128,
+        6.075/192,
+        8/255
+    }{
+        \draw (\x,0.08) -- (\x,-0.08);
+        \node[below] at (\x,-0.08) {\small \label};
+    }
+
+    % Blue histogram curve
     \draw[blue!70, thick]
     plot[smooth]
     coordinates {
@@ -11,6 +25,7 @@
     (8,0.5)
     };
 
+    % Red histogram curve
     \draw[red!70, thick]
     plot[smooth]
     coordinates {
@@ -20,6 +35,7 @@
     (8,0.3)
     };
 
+    % Intersection fill
     \begin{scope}
     \clip
     plot[smooth]
@@ -42,6 +58,7 @@
     -- (8,0) -- (0.3,0) -- cycle;
     \end{scope}
 
+    % Caption
     \node[font=\small] at (4,-0.8)
     {\textbf{Histogram Intersection}};
 \end{tikzpicture}

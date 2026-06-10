@@ -1,6 +1,17 @@
 \begin{tikzpicture}[scale=0.95]
-    \draw[->] (0,0) -- (8.5,0) node[right] {Bins $(1 \dots 255)$};
+    \draw[->] (0,0) -- (8.5,0) node[right] {Component Value};
     \draw[->] (0,0) -- (0,4.5) node[above] {Count};
+
+    \foreach \x/\label in {
+        0.3/0,
+        2.225/64,
+        4.15/128,
+        6.075/192,
+        8/255
+    }{
+        \draw (\x,0.08) -- (\x,-0.08);
+        \node[below] at (\x,-0.08) {\small \label};
+    }
 
     \draw[blue!70, thick]
     plot[smooth]

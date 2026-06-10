@@ -165,8 +165,9 @@ Common metrics for histogram comparison include:
     \end{minipage}
 \end{center}
 
-To improve robustness, bins typically represent color ranges rather than individual 
-values to account for sensor noise and minor lighting fluctuations.
+To improve robustness and reduce computational cost, bins typically represent color ranges rather than individual 
+values. This is done by grouping pixel values into discrete intervals (e.g., 16 or 32 bins per channel), which allows 
+for a more compact representation of the color distribution while still capturing essential information for tracking.
 
 \subsubsection{Addressing Environmental Noise: Shadows}
 Shadows represent a significant challenge in region-based tracking because 
