@@ -158,8 +158,16 @@ T(t_x,t_y,t_z)=
 \]
 
 \subsection{2D Camera Matrix}
-These transformations can be combined into a single \textbf{camera matrix}, which compactly maps real-world points to the 2D image plane.
-The 2D camera matrix typically combines rotation, translation, and scaling.
+A \textbf{camera matrix} models the geometric projection of a real-world coordinate into a specific pixel location on the image plane. 
+In a simplified 2D scenario, where the observed scene is treated as a flat plane, both the world point $P_w = \begin{bmatrix} x_w & y_w \end{bmatrix}^T$ 
+and its corresponding image projection $P_i = \begin{bmatrix} u & v \end{bmatrix}^T$ are two-dimensional.
+
+To represent translation as a linear operation, these coordinates are expressed in homogeneous form, allowing the mapping to be defined by a $3 \times 3$ transformation matrix. This matrix encapsulates a sequence of geometric operations:
+\begin{itemize}
+    \item \textbf{Translation:} Shifts the origin of the world coordinate system to align with the camera's optical center.
+    \item \textbf{Rotation:} Aligns the coordinate axes of the real world with the camera's local coordinate frame.
+    \item \textbf{Scaling:} Maps the physical spatial units (e.g., meters) into discrete pixel units on the sensor.
+\end{itemize}
 
 \begin{figure}[H]
     \centering
@@ -187,15 +195,19 @@ To map a point from the real world to the image plane, we theoretically multiply
 
 However, solving directly for these physical parameters ($\theta, c_x, c_y, x_0, y_0$) is mathematically difficult due to the trigonometric functions and multiplied variables. 
 
-To simplify the math, we multiply these three $3 \times 3$ matrices together and abstract the resulting cells into generic coefficients. This creates a \textbf{single, general camera matrix} $C$:
+To simplify the math, we multiply these three $3 \times 3$ matrices together and abstract the resulting cells into generic coefficients. 
+This creates a \textbf{single, general camera matrix} $C$:
 $$C = \begin{bmatrix} a_{11} & a_{12} & a_{13} \\ a_{21} & a_{22} & a_{23} \\ 0 & 0 & 1 \end{bmatrix}$$
 
 This transforms our complex problem into a simple linear mapping equation:
 $$P_i = C P_w$$
 
-Because this generalized matrix $C$ has 6 unknown parameters ($a_{11}$ through $a_{23}$), we need at least 3 \textbf{control points} to estimate it. Control points are reference points with known coordinates that are clearly identifiable in both the real world and the image plane. Each control point provides 2 equations (one for the x-coordinate, one for the y-coordinate).
+Because this generalized matrix $C$ has 6 unknown parameters ($a_{11}$ through $a_{23}$), we need at least 3 \textbf{control points} to estimate it. 
+Control points are reference points with known coordinates that are clearly identifiable in both the real world and the image plane. 
+Each control point provides 2 equations (one for the x-coordinate, one for the y-coordinate), giving us a total of 6 equations to solve for the 6 unknowns in $C$.
 
-\note{Control point selection guidelines:
+\note{
+    Control point selection is crucial for accurate estimation. Some key criteria for choosing them include:
     \begin{itemize}
         \item \textbf{Visibility:} Must be clearly identifiable in both spaces to ensure accurate matching.
         \item \textbf{Distribution:} Should be widely spread. Avoid collinear or highly clustered points to prevent numerical instability.
@@ -225,8 +237,10 @@ $$\begin{bmatrix}
 This system can be solved using standard linear algebra techniques, such as Gaussian elimination or Singular Value Decomposition (SVD), to find the optimal parameters for the camera matrix $C$.
 
 \subsection{3D Camera Matrix}
-The 2D camera matrix assumes the camera faces a flat surface perfectly parallel to the image plane. 
-For a real-world 3D scene, we must account for camera \textbf{calibration}, the process of estimating the camera's \textbf{intrinsic} and \textbf{extrinsic} parameters.
+The 2D camera matrix assumes the camera faces a flat surface perfectly parallel to the image plane.
+Because both the world point and its projection live in a single 2D plane, one combined matrix is enough to relate them.
+
+A real scene point, however, carries a \textbf{third coordinate} (depth). Projecting it onto the sensor can no longer be captured by a single planar mapping: we must additionally model \emph{where} the camera sits and \emph{how} it looks at the scene in 3D, and \emph{how} the 3D rays entering the lens collapse onto the 2D sensor. This is the role of camera \textbf{calibration}, the process of estimating the camera's \textbf{intrinsic} and \textbf{extrinsic} parameters.
 
 \subsubsection{Calibration Parameters}
 \begin{itemize}
@@ -247,7 +261,10 @@ A 3D point can be represented in several frames of reference:
 \note{Notation: We denote a pixel $P_i$ in the coordinate system of camera $k$ as $^kP_i$.}
 
 \subsubsection{General Transformation Matrix}
-We can combine 3D rotations and translations into a single $4 \times 4$ General Transformation Matrix $C$. This maps points between different 3D camera coordinate systems (e.g., from Camera 1 to Camera 2: $^2P_i = C ^1P_i$):
+As in the 2D case, multiple geometric transformations can be combined into a single homogeneous transformation matrix.
+In 3D, a camera coordinate system is related to another through a \textbf{rigid transformation}, consisting of a rotation and a translation.
+These transformations can be represented as a single $4 \times 4$ matrix that maps points from one camera's coordinate system to another 
+(e.g., from Camera 1 to Camera 2: $^2P_i = C ^1P_i$):
 $$ C = \begin{bmatrix}
 r_{11} & r_{12} & r_{13} & t_x \\
 r_{21} & r_{22} & r_{23} & t_y \\
@@ -255,8 +272,9 @@ r_{31} & r_{32} & r_{33} & t_z \\
 0 & 0 & 0 & 1
 \end{bmatrix} $$
 
-\subsubsection{The Full Camera Matrix}
-The General Transformation Matrix only handles 3D-to-3D movements. To map a 3D world point $^WP$ to a 2D image pixel $^IP$, we need a complete \textbf{Camera Matrix} ($^I_WC$) that combines both extrinsic and intrinsic parameters:
+\subsubsection{Combining Intrinsics and Extrinsics - Camera Model}
+The General Transformation Matrix only handles 3D-to-3D movements.
+To map a 3D world point $^WP$ to a 2D image pixel $^IP$, we need a \textbf{Camera Model} ($^I_WC$) that combines both extrinsic and intrinsic parameters:
 $$ ^IP = ^I_WC ^WP $$
 
 In homogeneous coordinates, this projection looks like:
@@ -267,14 +285,14 @@ s' P_x \\ s' P_y \\ s'
 ^WP_x \\ ^WP_y \\ ^WP_z \\ 1
 \end{bmatrix} $$
 
-To build this final matrix, we apply three sequential transformations (mirroring a pinhole camera model):
+To build this matrix, we apply three sequential transformations (mirroring a pinhole camera model):
 \begin{enumerate}
     \item \textbf{Roto-Translation ($TR$):} Extrinsic mapping from the World coordinate system ($^WP$) to the 3D Camera coordinate system ($^CP$).
     \item \textbf{Projection ($\Pi$):} Intrinsic mapping from the 3D Camera system to an intermediate 2D image plane ($^FP$), measured in millimeters.
     \item \textbf{Pixel Scaling ($\mathcal{S}$):} Intrinsic conversion from physical millimeters ($^FP$) to discrete image pixels ($^IP$).
 \end{enumerate}
 
-Multiplying these steps together yields our final $3 \times 4$ Camera Matrix $C$:
+Multiplying these steps together yields the $3 \times 4$ Camera Matrix $C$:
 $$ C = \begin{bmatrix}
 c_{11} & c_{12} & c_{13} & c_{14} \\
 c_{21} & c_{22} & c_{23} & c_{24} \\
@@ -282,17 +300,28 @@ c_{31} & c_{32} & c_{33} & 1 \\
 \end{bmatrix} $$
 
 \paragraph{Estimating the Matrix}
-Because this matrix has 11 unknown parameters (12 entries minus the fixed scaling factor of 1), we need at least \textbf{6 control points} in the real world to solve for it. 
+Because this matrix has 11 unknown parameters (12 entries minus the fixed scaling factor of 1), we need at least \textbf{6 control points} in the real world to solve for it.
+This processed is known as \textbf{camera calibration}. 
 \begin{itemize}
     \item Calibration typically uses an object of known geometry (like a checkerboard) to extract these points.
     \item Since the estimation relies on specific control points, accuracy degrades for scene points that are far away or occluded. 
     \item As with the 2D case, we use extra control points and apply Least Squares optimization to minimize projection error.
 \end{itemize}
 
+Even with a perfectly estimated matrix, this projection runs only one way, mapping a 3D world point to its pixel, collapsing depth in the process.
+The scaling factor $s$ is a symptom of that loss: every world point along a single viewing ray maps to the same pixel.
+Inverting the mapping from one image therefore recovers a \emph{ray}, not a point, so a single calibrated camera still cannot locate a point in 3D.
+Resolving the depth requires observing the same point from a second viewpoint.
+
 \subsection{Binocular Stereo}
 Binocular stereo is the simplest two-camera system for computing 3D world coordinates. 
-It requires two cameras viewing the same scene from different perspectives; o
-nly points visible to both cameras can be reconstructed.
+It requires two cameras viewing the same scene from different perspectives; 
+only points visible to both cameras can be reconstructed.
+
+Each camera contributes its own camera matrix, constructed exactly as in the single-camera case: 
+the second view simply adds another instance of the same $^I_WC$.
+Because each pixel fixes a viewing ray, a matched point seen in both images yields two rays that intersect 
+at its 3D position—stacking the two projection equations lets us solve for that position.
 
 To extract 3D information, the system performs two main steps:
 \begin{itemize}
@@ -452,18 +481,6 @@ It is crucial to distinguish the Fundamental Matrix ($F$) from the standard Came
     requiring absolutely no knowledge of the global 3D world frame or the actual 3D depths.
 \end{itemize}
 
-
-\paragraph{2D Homography}
-In many applications, finding the mapping between the cameras can be limited to the computation of correspondences between points,
-using a common plane in the scene. 
-In this case, the mapping between the two image planes can be expressed as a \textbf{homography} matrix $H$, which defines an invertible
-transformation between the image plane and the ground plane.
-It is defined as:
-\[ \boldsymbol{p}' = H \: \boldsymbol{p} \]
-where $\boldsymbol{p}$ is a point in the ground plane and $\boldsymbol{p}'$ is the corresponding point in the image plane.
-
-In such cases, having a second camera allows to resolve ambiguities in the matching process, and to compute the 3D coordinates of the points in the scene.
-
 \subsubsection{Correspondence Computing}
 To find a matching point in the two image planes, an error function must be defined to measure the similarity between the two projections of a point in the two image planes.
 This function can be based on intensity values or either evaluate edge features or segmented regions in the two image planes.
@@ -489,3 +506,63 @@ This can be equivalently done by computing the correlation between the two windo
 The windows are first transformed into vectors, and then the correlation is computed as the dot product between the two vectors:
 \[ \text{correlation} = \frac{1}{w^2} \sum_{u=1}^{w} \sum_{v=1}^{w} I_1'(i, j) I_2'(i, j) \]
 where \( I_1' \) and \( I_2' \) are the normalized intensity values in the two windows.
+
+
+\subsubsection{2D Homography}
+In many applications, finding the mapping between the cameras can be limited to the computation of correspondences between points,
+using a common plane in the scene.
+In this case, the mapping between the two image planes can be expressed as a \textbf{homography} matrix $H$, which defines an invertible
+transformation between the image plane and the ground plane.
+It is defined as:
+\[ \boldsymbol{p}' = H \: \boldsymbol{p} \]
+where $\boldsymbol{p}$ is a point in the ground plane and $\boldsymbol{p}'$ is the corresponding point in the image plane.
+
+In such cases, having a second camera allows to resolve ambiguities in the matching process, and to compute the 3D coordinates of the points in the scene.
+
+\paragraph{Computing the Matrix}
+Since $H$ is defined only up to a scale factor, the two sides of $\boldsymbol{p}' = H\boldsymbol{p}$ are parallel rather than strictly equal.
+We can therefore turn the relation into a homogeneous one by exploiting the fact that the cross product of a vector with itself vanishes:
+\[ \boldsymbol{p}' \times (H\boldsymbol{p}) = 0 \]
+
+Writing $\boldsymbol{p}' = (x', y', w')^T$ and denoting by $\boldsymbol{h}^{1T}, \boldsymbol{h}^{2T}, \boldsymbol{h}^{3T}$ the three rows of $H$ (so that $\boldsymbol{h}^{jT}\boldsymbol{p}$ is the $j$-th entry of $H\boldsymbol{p}$), the cross product expands to:
+\[ \boldsymbol{p}' \times H\boldsymbol{p} = \begin{pmatrix}
+y' \boldsymbol{h}^{3T}\boldsymbol{p} - w' \boldsymbol{h}^{2T}\boldsymbol{p} \\
+w' \boldsymbol{h}^{1T}\boldsymbol{p} - x' \boldsymbol{h}^{3T}\boldsymbol{p} \\
+x' \boldsymbol{h}^{2T}\boldsymbol{p} - y' \boldsymbol{h}^{1T}\boldsymbol{p}
+\end{pmatrix} = 0 \]
+
+These equations are linear in the entries of $H$. Using $\boldsymbol{h}^{jT}\boldsymbol{p} = \boldsymbol{p}^T\boldsymbol{h}^{j}$, they can be rearranged into matrix form, with the rows of $H$ stacked into the vector $\boldsymbol{h} = (\boldsymbol{h}^{1}, \boldsymbol{h}^{2}, \boldsymbol{h}^{3})^T$:
+\[ \begin{bmatrix}
+\boldsymbol{0}^T & -w' \boldsymbol{p}^T & y' \boldsymbol{p}^T \\
+w' \boldsymbol{p}^T & \boldsymbol{0}^T & -x' \boldsymbol{p}^T \\
+-y' \boldsymbol{p}^T & x' \boldsymbol{p}^T & \boldsymbol{0}^T
+\end{bmatrix} \begin{bmatrix} \boldsymbol{h}^{1} \\ \boldsymbol{h}^{2} \\ \boldsymbol{h}^{3} \end{bmatrix} = 0 \]
+
+Only two of these three rows are independent (the third is a linear combination of the other two), so each correspondence contributes a $2 \times 9$ block $A_i$ and two equations:
+\[ A_i \boldsymbol{h} = 0 \]
+
+\paragraph{Solving for $H$}
+Because each correspondence yields two independent equations and $H$ has $9$ entries defined up to scale (i.e. $8$ degrees of freedom), \textbf{four point correspondences} are enough to determine it.
+Stacking their blocks gives an $8 \times 9$ system $A\boldsymbol{h} = 0$, and the scale ambiguity is removed by imposing a normalization such as $\lVert \boldsymbol{h} \rVert = 1$.
+
+With more than four correspondences the system becomes \textbf{overdetermined}.
+Measurement noise then makes $A\boldsymbol{h} = 0$ solvable only by the trivial $\boldsymbol{h} = \boldsymbol{0}$, so we instead seek the $\boldsymbol{h}$ that minimizes $\lVert A\boldsymbol{h} \rVert$ subject to $\lVert \boldsymbol{h} \rVert = 1$.
+This minimization is solved through the \textbf{Direct Linear Transformation (DLT)}.
+
+Alternatively, the scale can be fixed by setting a single entry, e.g. $h_{33} = 1$.
+This converts the homogeneous system into an inhomogeneous one $M\boldsymbol{h} = \boldsymbol{b}$ with eight unknowns, solved exactly from four points or by least squares for more—though this choice is unreliable when the fixed entry is close to zero.
+
+\subsection{Three Views}
+Two calibrated views are already enough to reconstruct the 3D position of a matched point, so a third camera adds no new positional information on its own.
+What it adds is \textbf{redundancy}: extra constraints that tie the images together and let a projection be \emph{predicted} rather than measured.
+Pushing this further—to many views that may overlap only partially—is what enables full 3D reconstruction, where one typically reasons about \textbf{voxels} rather than pixels.
+
+Assuming known intrinsic parameters, three cameras observe the same world point $P$ as the projections $^1\boldsymbol{p}$, $^2\boldsymbol{p}$, and $^3\boldsymbol{p}$.
+Each \emph{pair} of cameras still obeys the epipolar constraint through its essential matrix:
+$$ {}^1\boldsymbol{p}^T E_{12}\, {}^2\boldsymbol{p} = 0, \qquad {}^2\boldsymbol{p}^T E_{23}\, {}^3\boldsymbol{p} = 0, \qquad {}^3\boldsymbol{p}^T E_{31}\, {}^1\boldsymbol{p} = 0 $$
+
+These three constraints are \textbf{not independent}: the images of one camera's optical center in the other two views are themselves in epipolar correspondence, which couples the three essential matrices.
+Only two of the equations are therefore independent, so—once the essential matrices are known—two projections already determine the third.
+
+\paragraph{Problem of Transfer}
+This redundancy is the \textbf{transfer} property: given the essential (or fundamental) matrices, the projection of a point in one image can be predicted from its projections in the other two views, without ever reconstructing the 3D coordinates.
